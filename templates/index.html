@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Sentiment Analyzer</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+  }
+  .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 32px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  p.sub { color: #94a3b8; margin-top: 0; font-size: 0.9rem; }
+  textarea {
+    width: 100%;
+    height: 120px;
+    background: #0f172a;
+    color: #f1f5f9;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 1rem;
+    resize: vertical;
+  }
+  button {
+    margin-top: 12px;
+    width: 100%;
+    padding: 12px;
+    background: #6366f1;
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  button:hover { background: #4f46e5; }
+  #result { margin-top: 20px; padding: 16px; border-radius: 10px; display: none; }
+  #result.positive { background: rgba(34,197,94,0.15); border: 1px solid #22c55e; }
+  #result.negative { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; }
+  #explanation { margin-top: 10px; font-size: 0.85rem; color: #cbd5e1; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>🎬 AI Sentiment Analyzer</h1>
+    <p class="sub">DL model (LSTM) trained from scratch on IMDB reviews</p>
+    <textarea id="text" placeholder="Type a movie review... e.g. 'This film was absolutely brilliant!'"></textarea>
+    <button onclick="analyze()">Analyze Sentiment</button>
+    <div id="result"></div>
+  </div>
+
+<script>
+async function analyze() {
+  const text = document.getElementById("text").value;
+  const resultDiv = document.getElementById("result");
+  if (!text.trim()) { alert("Please enter some text"); return; }
+
+  resultDiv.style.display = "block";
+  resultDiv.className = "";
+  resultDiv.innerHTML = "Analyzing...";
+
+  const res = await fetch("/predict", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({text})
+  });
+  const data = await res.json();
+
+  if (data.error) {
+    resultDiv.innerHTML = data.error;
+    return;
+  }
+
+  resultDiv.className = data.label.toLowerCase();
+  resultDiv.innerHTML = `<strong>${data.label}</strong> (${data.confidence}% confidence)
+    <div id="explanation">Loading explanation...</div>`;
+
+  // optional GenAI explanation call
+  const exRes = await fetch("/explain", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({text, label: data.label})
+  });
+  const exData = await exRes.json();
+  document.getElementById("explanation").innerText = exData.explanation;
+}
+</script>
+</body>
+</html>
